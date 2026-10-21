@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from backend.app.ingestion.embedder import embedder
 from backend.app.ingestion.storage import vector_store
 
-
+#test
 def main() -> int:
     print("=" * 60)
     print("Testing Semantic Search")
