@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.api.documents import router as documents_router
-
+from app.api.documents import router as documents_router
 app = FastAPI(
     title="Enterprise AI Knowledge Assistant API",
     description="RAG + AI Agent for company knowledge base",

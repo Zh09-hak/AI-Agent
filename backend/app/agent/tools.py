@@ -1,6 +1,6 @@
-from backend.app.ingestion.storage import vector_store
-from backend.app.ingestion.embedder import embedder
-from backend.app.database.models import SessionLocal, Document
+﻿from app.ingestion.storage import vector_store
+from app.ingestion.embedder import embedder
+from app.database.models import SessionLocal, Document
 
 def search_documents(query: str, top_k: int = 5) -> str:
     query_embedding = embedder.embed_text(query)

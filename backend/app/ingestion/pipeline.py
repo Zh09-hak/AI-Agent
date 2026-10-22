@@ -1,11 +1,11 @@
-import hashlib
+﻿import hashlib
 from pathlib import Path
 from datetime import datetime
 
-from backend.app.ingestion.extractor import extract_text
-from backend.app.ingestion.chunker import create_chunks_with_metadata
-from backend.app.ingestion.embedder import embedder
-from backend.app.ingestion.storage import vector_store
+from app.ingestion.extractor import extract_text
+from app.ingestion.chunker import create_chunks_with_metadata
+from app.ingestion.embedder import embedder
+from app.ingestion.storage import vector_store
 
 
 def calculate_file_hash(file_path: Path) -> str:
@@ -42,7 +42,7 @@ def ingest_document(
     
     print("\n[1/4] Extracting text...")
     pages = extract_text(file_path, mime_type)
-    print(f"✓ Extracted {len(pages)} page(s)")
+    print(f"âœ“ Extracted {len(pages)} page(s)")
     
     print("\n[2/4] Creating chunks...")
     chunks = create_chunks_with_metadata(
@@ -52,16 +52,16 @@ def ingest_document(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
     )
-    print(f"✓ Created {len(chunks)} chunk(s)")
+    print(f"âœ“ Created {len(chunks)} chunk(s)")
     
     print("\n[3/4] Creating embeddings...")
     texts = [chunk["text"] for chunk in chunks]
     embeddings = embedder.embed_texts(texts)
-    print(f"✓ Created {len(embeddings)} embedding(s)")
+    print(f"âœ“ Created {len(embeddings)} embedding(s)")
     
     print("\n[4/4] Saving to vector store...")
     num_added = vector_store.add_chunks(chunks, embeddings)
-    print(f"✓ Saved {num_added} chunk(s) to vector store")
+    print(f"âœ“ Saved {num_added} chunk(s) to vector store")
     
     return {
         "document_id": document_id,

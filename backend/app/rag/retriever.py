@@ -1,5 +1,5 @@
-from backend.app.ingestion.embedder import embedder
-from backend.app.ingestion.storage import vector_store
+﻿from app.ingestion.embedder import embedder
+from app.ingestion.storage import vector_store
 
 
 def retrieve_relevant_chunks(

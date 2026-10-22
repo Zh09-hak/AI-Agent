@@ -1,6 +1,6 @@
-from backend.app.rag.retriever import retrieve_relevant_chunks
-from backend.app.rag.prompt_builder import build_rag_prompt
-from backend.app.rag.llm_service import llm_service
+﻿from app.rag.retriever import retrieve_relevant_chunks
+from app.rag.prompt_builder import build_rag_prompt
+from app.rag.llm_service import llm_service
 
 
 def rag_query(
@@ -14,27 +14,27 @@ def rag_query(
     
     print("\n[0/3] Rewriting query for better retrieval...")
     standalone_query = llm_service.rewrite_query(history, current_query)
-    print(f"✓ Standalone query: '{standalone_query}'")
+    print(f"âœ“ Standalone query: '{standalone_query}'")
     
     print("\n[1/3] Retrieving relevant chunks...")
     chunks = retrieve_relevant_chunks(standalone_query, top_k=top_k)
-    print(f"✓ Retrieved {len(chunks)} chunk(s)")
+    print(f"âœ“ Retrieved {len(chunks)} chunk(s)")
     
     print("\n[2/3] Building prompt...")
     prompt = build_rag_prompt(standalone_query, chunks) 
-    print(f"✓ Prompt built ({len(prompt)} characters)")
+    print(f"âœ“ Prompt built ({len(prompt)} characters)")
     
     print("\n[3/3] Generating answer with LLM...")
     answer = llm_service.generate(prompt, temperature=0.1)
-    print(f"✓ Answer generated ({len(answer)} characters)")
+    print(f"âœ“ Answer generated ({len(answer)} characters)")
 
     no_answer_phrases = [
         "i don't have enough information",
         "i do not have enough information",
         "cannot answer",
         "not enough information",
-        "недостаточно информации",
-        "нет информации"
+        "Ð½ÐµÐ´Ð¾ÑÑ‚Ð°Ñ‚Ð¾Ñ‡Ð½Ð¾ Ð¸Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸Ð¸",
+        "Ð½ÐµÑ‚ Ð¸Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸Ð¸"
     ]
     found_relevant_info = not any(phrase in answer.lower() for phrase in no_answer_phrases)
     sources = []

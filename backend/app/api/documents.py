@@ -1,16 +1,17 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+﻿from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from sqlalchemy.orm import Session
 from pathlib import Path
 import shutil
 from datetime import datetime
 
-from backend.app.database.models import get_db, Document
-from backend.app.ingestion.pipeline import ingest_document
-from backend.app.schemas.document import UploadResponse, DocumentMetadata
-from backend.app.ingestion.storage import vector_store
-from backend.app.rag.rag_pipeline import rag_query
-
-from backend.app.memory.conversation_memory import memory
+# from app.database.models import get_db, Document
+# from app.ingestion.pipeline import ingest_document
+from app.ingestion.pipeline import ingest_document
+from app.schemas.document import UploadResponse, DocumentMetadata
+from app.ingestion.storage import vector_store
+from app.rag.rag_pipeline import rag_query
+from app.database.models import get_db, Document
+from app.memory.conversation_memory import memory
 from sqlalchemy.orm import Session as DBSession
 import uuid
 
@@ -145,8 +146,8 @@ async def chat(request: dict, db: DBSession = Depends(get_db)):
     session_id = request.get("session_id")
     
     print(f"\n{'='*20} API CHAT REQUEST {'='*20}")
-    print(f"📥 Received Session ID: {session_id}")
-    print(f"❓ Question: {question}")
+    print(f"ðŸ“¥ Received Session ID: {session_id}")
+    print(f"â“ Question: {question}")
     print(f"{'='*58}\n")
     
     if not question:

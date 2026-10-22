@@ -1,5 +1,5 @@
-from sqlalchemy.orm import Session as DBSession
-from backend.app.database.models import Session as SessionModel, Message
+﻿from sqlalchemy.orm import Session as DBSession
+from app.database.models import Session as SessionModel, Message
 from datetime import datetime
 import uuid
 
