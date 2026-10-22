@@ -8,6 +8,7 @@ from backend.app.database.models import get_db, Document
 from backend.app.ingestion.pipeline import ingest_document
 from backend.app.schemas.document import UploadResponse, DocumentMetadata
 from backend.app.ingestion.storage import vector_store
+from backend.app.rag.rag_pipeline import rag_query
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -133,3 +134,23 @@ async def delete_document(
         "message": f"Document {document.filename} deleted successfully",
         "chunks_deleted": num_deleted_chunks,
     }
+
+@router.post("/chat")
+async def chat(request: dict):
+    question = request.get("question", "").strip()
+    
+    if not question:
+        raise HTTPException(
+            status_code=400,
+            detail="Question cannot be empty"
+        )
+    
+    try:
+        result = rag_query(question, top_k=5)
+        return result
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Chat failed: {str(e)}"
+        )

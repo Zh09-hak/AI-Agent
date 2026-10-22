@@ -87,7 +87,75 @@ with st.sidebar:
         st.error(f"Error: {e}")
 
 st.header("💬 Chat with Documents")
-st.info("Chat functionality will be implemented in the next step.")
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+        if message["role"] == "assistant" and "sources" in message:
+            with st.expander("📚 View Sources"):
+                for source in message["sources"]:
+                    st.write(f"**[Source {source['source_number']}]** {source['filename']}")
+                    if source['page_number']:
+                        st.write(f"Page: {source['page_number']}")
+                    st.text(source['text'])
+                    st.divider()
+
+if prompt := st.chat_input("Ask a question about your documents..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        with st.spinner("Searching documents and generating answer..."):
+            try:
+                response = requests.post(
+                    f"{API_BASE_URL}/documents/chat",
+                    json={"question": prompt},
+                    timeout=120,
+                )
+                if response.status_code == 200:
+                    result = response.json()
+                    answer = result["answer"]
+                    sources = result["sources"]
+                    
+                    st.markdown(answer)
+                    with st.expander("📚 View Sources"):
+                        for source in sources:
+                            st.write(f"**[Source {source['source_number']}]** {source['filename']}")
+                            if source['page_number']:
+                                st.write(f"Page: {source['page_number']}")
+                            st.text(source['text'])
+                            st.divider()
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": answer,
+                        "sources": sources,
+                    })
+                else:
+                    error_msg = f"Error: {response.text}"
+                    st.error(error_msg)
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": error_msg,
+                    })
+            
+            except requests.exceptions.Timeout:
+                error_msg = "Request timed out. The LLM is taking too long to respond."
+                st.error(error_msg)
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": error_msg,
+                })
+            
+            except Exception as e:
+                error_msg = f"Error: {str(e)}"
+                st.error(error_msg)
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": error_msg,
+                })
 
 st.divider()
 if st.button("Test API Health"):
