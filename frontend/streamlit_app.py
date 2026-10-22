@@ -1,7 +1,7 @@
 import requests
 import streamlit as st
 import time
-
+import uuid
 
 API_BASE_URL = "http://127.0.0.1:8000"
 
@@ -11,7 +11,13 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("Enterprise AI Knowledge Assistant")
+if "current_session_id" not in st.session_state:
+    st.session_state.current_session_id = str(uuid.uuid4())
+    
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+st.title("🧠 Enterprise AI Knowledge Assistant")
 
 with st.sidebar:
     st.header("Document Management")
@@ -51,7 +57,6 @@ with st.sidebar:
     
     if st.button("Refresh List"):
         st.rerun()
-    
     try:
         response = requests.get(f"{API_BASE_URL}/documents/")
         
@@ -86,6 +91,12 @@ with st.sidebar:
     except Exception as e:
         st.error(f"Error: {e}")
 
+    st.divider()
+    if st.button("🔄 Start New Chat"):
+        st.session_state.current_session_id = str(uuid.uuid4())
+        st.session_state.messages = []
+        st.rerun()
+
 st.header("💬 Chat with Documents")
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -94,13 +105,16 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         if message["role"] == "assistant" and "sources" in message:
-            with st.expander("📚 View Sources"):
-                for source in message["sources"]:
-                    st.write(f"**[Source {source['source_number']}]** {source['filename']}")
-                    if source['page_number']:
-                        st.write(f"Page: {source['page_number']}")
-                    st.text(source['text'])
-                    st.divider()
+            if message.get("sources"):
+                with st.expander("📚 View Sources"):
+                    for source in message["sources"]:
+                        st.write(f"**[Source {source['source_number']}]** {source['filename']}")
+                        if source.get('page_number'):
+                            st.write(f"Page: {source['page_number']}")
+                        st.text(source['text'])
+                        st.divider()
+            else:
+                st.caption("ℹ️ No relevant sources found in the knowledge base.")
 
 if prompt := st.chat_input("Ask a question about your documents..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -112,22 +126,29 @@ if prompt := st.chat_input("Ask a question about your documents..."):
             try:
                 response = requests.post(
                     f"{API_BASE_URL}/documents/chat",
-                    json={"question": prompt},
+                    json={
+                        "question": prompt,
+                        "session_id": st.session_state.current_session_id
+                    },
                     timeout=120,
                 )
+                
                 if response.status_code == 200:
                     result = response.json()
                     answer = result["answer"]
                     sources = result["sources"]
                     
                     st.markdown(answer)
-                    with st.expander("📚 View Sources"):
-                        for source in sources:
-                            st.write(f"**[Source {source['source_number']}]** {source['filename']}")
-                            if source['page_number']:
-                                st.write(f"Page: {source['page_number']}")
-                            st.text(source['text'])
-                            st.divider()
+                    if result.get("sources"):
+                        with st.expander("📚 View Sources"):
+                            for source in result["sources"]:
+                                st.write(f"**[Source {source['source_number']}]** {source['filename']}")
+                                if source.get('page_number'):
+                                    st.write(f"Page: {source['page_number']}")
+                                st.text(source['text'])
+                                st.divider()
+                    else:
+                        st.info("ℹ️ The assistant could not find relevant documents to answer this specific question.")
                     st.session_state.messages.append({
                         "role": "assistant",
                         "content": answer,

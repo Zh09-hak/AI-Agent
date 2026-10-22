@@ -10,6 +10,10 @@ from backend.app.schemas.document import UploadResponse, DocumentMetadata
 from backend.app.ingestion.storage import vector_store
 from backend.app.rag.rag_pipeline import rag_query
 
+from backend.app.memory.conversation_memory import memory
+from sqlalchemy.orm import Session as DBSession
+import uuid
+
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 UPLOAD_DIR = Path("data/uploads")
@@ -136,21 +140,34 @@ async def delete_document(
     }
 
 @router.post("/chat")
-async def chat(request: dict):
+async def chat(request: dict, db: DBSession = Depends(get_db)):
     question = request.get("question", "").strip()
+    session_id = request.get("session_id")
+    
+    print(f"\n{'='*20} API CHAT REQUEST {'='*20}")
+    print(f"📥 Received Session ID: {session_id}")
+    print(f"❓ Question: {question}")
+    print(f"{'='*58}\n")
     
     if not question:
-        raise HTTPException(
-            status_code=400,
-            detail="Question cannot be empty"
-        )
+        raise HTTPException(status_code=400, detail="Question cannot be empty")
+    
+    session_id = memory.get_or_create_session(db, session_id)
+    
+    history = memory.get_history(db, session_id, max_messages=4)
+    
+    memory.add_message(db, session_id, "user", question)
     
     try:
-        result = rag_query(question, top_k=5)
-        return result
+        result = rag_query(history=history, current_query=question, top_k=5)
+        memory.add_message(db, session_id, "assistant", result["answer"])
+        
+        return {
+            "answer": result["answer"],
+            "sources": result["sources"],
+            "retrieved_chunks": result["retrieved_chunks"],
+            "session_id": session_id,
+        }
     
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Chat failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")

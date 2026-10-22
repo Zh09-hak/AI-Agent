@@ -40,7 +40,7 @@ def build_rag_prompt(
     5. DO NOT add "[Source X]" if that source does not contain the relevant information.
     6. If you cannot find relevant information in the sources, explicitly say so.
     7. Respond in the same language as the user's question.
-
+    8. ENTITY RELEVANCE: If the user asks about a specific topic (e.g., "Decision Trees"), but the context only contains "advantages" or "strengths" of OTHER topics (e.g., "Neural Networks", "Cross-Validation"), you MUST state that you don't have enough information. DO NOT list the advantages of other topics.
     EXAMPLE OF CORRECT BEHAVIOR:
     User: "What is our vacation policy?"
     Context: [Source 1: policy.txt] Employees get 20 days vacation.
