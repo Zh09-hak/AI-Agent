@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.app.api.agent import router as agent_router
 from backend.app.api.documents import router as documents_router
 
 app = FastAPI(
@@ -23,3 +24,4 @@ def health() -> dict[str, str]:
     return {"status": "ok", "service": "api"}
 
 app.include_router(documents_router)
+app.include_router(agent_router)

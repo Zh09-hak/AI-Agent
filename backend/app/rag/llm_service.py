@@ -60,6 +60,42 @@ class LLMService:
         except requests.exceptions.RequestException as e:
             raise Exception(f"LLM request failed: {e}")
 
+    def chat_with_tools(
+        self,
+        messages: list[dict],
+        tools: list[dict] | None = None,
+        temperature: float = 0.0,
+        max_tokens: int = 1500,
+    ) -> dict:
+
+        payload: dict = {
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+            "think": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            },
+        }
+
+        if tools:
+            payload["tools"] = tools
+
+        try:
+            response = requests.post(self.api_url, json=payload, timeout=600)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError:
+            if "think" in payload:
+                payload.pop("think")
+                response = requests.post(self.api_url, json=payload, timeout=600)
+                response.raise_for_status()
+            else:
+                raise
+
+        data = response.json()
+        return data.get("message", {}) or {}
+    
     def rewrite_query(self, history: list[dict], current_query: str) -> str:
         print(f"\n{'='*20} DEBUG REWRITE {'='*20}")
         print(f"Current Query: {current_query}")

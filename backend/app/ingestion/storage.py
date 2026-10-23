@@ -53,16 +53,20 @@ class VectorStore:
         self,
         query_embedding: list[float],
         top_k: int = 5,
+        where: dict | None = None,
     ) -> list[dict]:
 
-        results = self.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            include=["documents", "metadatas", "distances"]
-        )
+        query_kwargs: dict = {
+            "query_embeddings": [query_embedding],
+            "n_results": top_k,
+            "include": ["documents", "metadatas", "distances"],
+        }
+        if where:
+            query_kwargs["where"] = where
+
+        results = self.collection.query(**query_kwargs)
 
         search_results = []
-        
         if results["ids"] and results["ids"][0]:
             for i, chunk_id in enumerate(results["ids"][0]):
                 search_results.append({
@@ -71,7 +75,7 @@ class VectorStore:
                     "metadata": results["metadatas"][0][i],
                     "distance": results["distances"][0][i],
                 })
-        
+
         return search_results
     
     def delete_by_document_id(self, document_id: str) -> int:
@@ -88,9 +92,9 @@ class VectorStore:
     def get_document_chunks(self, document_id: str) -> list[dict]:
         results = self.collection.get(
             where={"document_id": document_id},
-            include=["documents", "metadatas"]
+            include=["documents", "metadatas"],
         )
-        
+
         chunks = []
         if results["ids"]:
             for i, chunk_id in enumerate(results["ids"]):
@@ -99,7 +103,8 @@ class VectorStore:
                     "text": results["documents"][i],
                     "metadata": results["metadatas"][i],
                 })
-        
+        chunks.sort(key=lambda c: c["metadata"].get("chunk_index", 0))
+
         return chunks
     
     def count_chunks(self) -> int:
