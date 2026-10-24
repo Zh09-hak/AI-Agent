@@ -25,7 +25,7 @@ def rag_query(
     print(f"✓ Prompt built ({len(prompt)} characters)")
     
     print("\n[3/3] Generating answer with LLM...")
-    answer = llm_service.generate(prompt, temperature=0.1)
+    answer = llm_service.generate(prompt, temperature=0.1, max_tokens=2000)
     print(f"✓ Answer generated ({len(answer)} characters)")
 
     no_answer_phrases = [

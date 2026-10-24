@@ -1,63 +1,45 @@
-import requests
 import os
-
+import re
+import requests
+from openai import OpenAI
 
 class LLMService:
     def __init__(
         self,
-        base_url: str = "http://localhost:11434",
-        model: str = "qwen3:8b"
+        base_url: str = "https://api.groq.com/openai/v1",
+        model: str = "llama-3.3-70b-versatile",
+        api_key: str | None = None,
     ):
         self.base_url = base_url
         self.model = model
-        self.api_url = f"{base_url}/api/chat"
-    
+        self.api_key = api_key or os.getenv("GROQ_API_KEY")
+        
+        if not self.api_key:
+            raise ValueError(
+                "GROQ_API_KEY not found. Set it in environment variables."
+            )
+        
+        self.client = OpenAI(
+            base_url=self.base_url,
+            api_key=self.api_key,
+        )
+
     def generate(
         self,
         prompt: str,
         temperature: float = 0.1,
         max_tokens: int = 1000,
     ) -> str:
-        payload = {
-            "model": self.model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
-            "stream": False,
-            "options": {
-                "temperature": temperature,
-                "num_predict": max_tokens,
-            },
-        }
-        
         try:
-            response = requests.post(
-                self.api_url,
-                json=payload,
-                timeout=120,
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature,
+                max_tokens=max_tokens,
             )
-            response.raise_for_status()
-            
-            data = response.json()
-
-            content = data.get("message", {}).get("content", "")
-            
+            content = response.choices[0].message.content or ""
             return content.strip()
-        
-        except requests.exceptions.ConnectionError:
-            raise Exception(
-                "Cannot connect to Ollama. Is Ollama running?"
-            )
-        
-        except requests.exceptions.Timeout:
-            raise Exception(
-                "LLM request timed out. The model may be too slow or the prompt too long."
-            )
-        
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             raise Exception(f"LLM request failed: {e}")
 
     def chat_with_tools(
@@ -67,85 +49,90 @@ class LLMService:
         temperature: float = 0.0,
         max_tokens: int = 1500,
     ) -> dict:
-
-        payload: dict = {
-            "model": self.model,
-            "messages": messages,
-            "stream": False,
-            "think": False,
-            "options": {
-                "temperature": temperature,
-                "num_predict": max_tokens,
-            },
-        }
-
-        if tools:
-            payload["tools"] = tools
-
         try:
-            response = requests.post(self.api_url, json=payload, timeout=600)
-            response.raise_for_status()
-        except requests.exceptions.HTTPError:
-            if "think" in payload:
-                payload.pop("think")
-                response = requests.post(self.api_url, json=payload, timeout=600)
-                response.raise_for_status()
-            else:
-                raise
+            kwargs = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+            if tools:
+                kwargs["tools"] = tools
+            
+            response = self.client.chat.completions.create(**kwargs)
+            message = response.choices[0].message
+            return {
+                "role": message.role,
+                "content": message.content or "",
+                "tool_calls": message.tool_calls,
+            }
+        except Exception as e:
+            raise Exception(f"LLM tool call failed: {e}")
 
-        data = response.json()
-        return data.get("message", {}) or {}
-    
     def rewrite_query(self, history: list[dict], current_query: str) -> str:
         print(f"\n{'='*20} DEBUG REWRITE {'='*20}")
         print(f"Current Query: {current_query}")
         print(f"History length: {len(history)}")
-        
+
         if not history:
             print("⚠️ HISTORY IS EMPTY! Skipping LLM rewrite.")
             print(f"{'='*55}\n")
             return current_query
-            
-        print(f"Last message in history: [{history[-1]['role']}] {history[-1]['content'][:100]}...")
-            
+
         history_text_parts = []
         for msg in history[-4:]:
             content = msg['content']
             if msg['role'] == 'assistant' and len(content) > 300:
                 content = content[:300] + "..."
-            history_text_parts.append(f"{msg['role'].upper()}: {content}")
-            
+            role = "USER" if msg['role'] == 'user' else "ASSISTANT"
+            history_text_parts.append(f"{role}: {content}")
         history_text = "\n".join(history_text_parts)
-        prompt = f"""You are an AI assistant that rewrites user questions into standalone search queries based on conversation history.
-Given the chat history and the latest user question, rewrite the latest question to be a clear, standalone question that captures the full context.
-If the latest question is already clear and doesn't need context, return it exactly as is.
-DO NOT answer the question. ONLY output the rewritten question.
 
-CHAT HISTORY:
+        prompt = f"""You are a search query rewriter. Rewrite the user's latest 
+question into a standalone search query using chat history. Fix grammar, 
+resolve pronouns. Output ONLY the rewritten query.
+
+Examples:
+History:
+USER: What is L1 and L2?
+ASSISTANT: L1 and L2 are regularization techniques.
+LATEST QUESTION: What is differences between them?
+REWRITTEN: What are the differences between L1 and L2 regularization?
+
+Current Task:
+History:
 {history_text}
-
-LATEST QUESTION:
-{current_query}
-
-REWRITTEN QUESTION:"""
+LATEST QUESTION: {current_query}
+REWRITTEN:"""
 
         try:
-            raw_output = self.generate(prompt, temperature=0.0, max_tokens=300)
+            raw_output = self.generate(prompt, temperature=0.1, max_tokens=100)
+            rewritten = (raw_output or "").strip().strip('"').strip("'").strip()
             print(f"RAW LLM OUTPUT:\n{raw_output}")
-            
-            rewritten = raw_output.strip().strip('"').strip("'")
-            
-            if not rewritten:
-                print("⚠️ LLM returned empty string. Falling back to original query.")
+
+            if rewritten and len(rewritten) > 5 and "History:" not in rewritten:
+                print(f"FINAL REWRITTEN: {rewritten}")
                 print(f"{'='*55}\n")
-                return current_query
-                
-            print(f"FINAL REWRITTEN: {rewritten}")
-            print(f"{'='*55}\n")
-            return rewritten
+                return rewritten
         except Exception as e:
-            print(f"Warning: Query rewriting failed: {e}. Falling back to original query.")
-            print(f"{'='*55}\n")
-            return current_query
+            print(f"Warning: LLM rewrite failed: {e}")
+
+        print("⚠️ Trying smart concatenation fallback...")
+        fallback = self._smart_fallback(history, current_query)
+        print(f"FALLBACK REWRITE: {fallback}")
+        print(f"{'='*55}\n")
+        return fallback
+
+    def _smart_fallback(self, history: list[dict], query: str) -> str:
+        user_queries = [msg["content"] for msg in history if msg["role"] == "user"]
+        if not user_queries:
+            return query
+        first_query = user_queries[0]
+        if len(query.split()) <= 8:
+            if first_query.strip().lower() == query.strip().lower():
+                return query
+            return f"{first_query} {query}"
+        return query
+
 
 llm_service = LLMService()

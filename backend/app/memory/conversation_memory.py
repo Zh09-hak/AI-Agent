@@ -34,7 +34,7 @@ class ConversationMemory:
         db.commit()
     
     @staticmethod
-    def get_history(db: DBSession, session_id: str, max_messages: int = 5) -> list[dict]:
+    def get_history(db: DBSession, session_id: str, max_messages: int = 30) -> list[dict]:
         messages = db.query(Message).filter(
             Message.session_id == session_id
         ).order_by(Message.created_at.desc()).limit(max_messages).all()

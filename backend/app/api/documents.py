@@ -154,7 +154,7 @@ async def chat(request: dict, db: DBSession = Depends(get_db)):
     
     session_id = memory.get_or_create_session(db, session_id)
     
-    history = memory.get_history(db, session_id, max_messages=4)
+    history = memory.get_history(db, session_id, max_messages=30)
     
     memory.add_message(db, session_id, "user", question)
     

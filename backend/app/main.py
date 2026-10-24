@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.agent import router as agent_router
 from backend.app.api.documents import router as documents_router
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 app = FastAPI(
     title="Enterprise AI Knowledge Assistant API",
@@ -12,8 +16,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=["https://zhores-ai-agent.streamlit.app"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

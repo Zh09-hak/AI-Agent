@@ -75,16 +75,18 @@ def create_chunks_with_metadata(
     chunk_size: int = 800,
     chunk_overlap: int = 200,
 ) -> list[dict]:
+    from backend.app.ingestion.chunk_quality import is_good_chunk
 
     chunks = []
     chunk_index = 0
-    
     for text, page_number in pages:
         text_chunks = chunk_text(text, chunk_size, chunk_overlap)
-        
         for text_chunk in text_chunks:
+            ok, reason = is_good_chunk(text_chunk)
+            if not ok:
+                continue
+
             chunk_id = f"{document_id}_chunk_{chunk_index}"
-            
             chunk_data = {
                 "chunk_id": chunk_id,
                 "document_id": document_id,
@@ -93,12 +95,11 @@ def create_chunks_with_metadata(
                 "chunk_index": chunk_index,
                 "text": text_chunk,
             }
-            
             chunks.append(chunk_data)
             chunk_index += 1
-    
+
     total_chunks = len(chunks)
     for chunk in chunks:
         chunk["total_chunks"] = total_chunks
-    
+
     return chunks
