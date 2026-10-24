@@ -1,29 +1,25 @@
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 
 class Embedder:
-    def __init__(
-        self,
-        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-    ):
-        self.model_name = model_name
-        self.model = None
+    def __init__(self):
+        self.model_name = "BAAI/bge-small-en-v1.5"
         self.embedding_dimension = 384
+        self.model = None
 
     def _load_model(self):
         if self.model is None:
-            self.model = SentenceTransformer(
-                self.model_name,
-                device="cpu",
+            self.model = TextEmbedding(
+                model_name=self.model_name
             )
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+
         self._load_model()
-        embeddings = self.model.encode(
-            texts,
-            show_progress_bar=False,
-            convert_to_numpy=True,
-        )
-        return embeddings.tolist()
+        embeddings = self.model.embed(texts)
+
+        return [embedding.tolist() for embedding in embeddings]
 
     def embed_text(self, text: str) -> list[float]:
         return self.embed_texts([text])[0]
