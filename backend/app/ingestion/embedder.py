@@ -1,18 +1,32 @@
 from sentence_transformers import SentenceTransformer
 
-
 class Embedder:
-    def __init__(self, model_name: str = "BAAI/bge-base-en-v1.5"):
-        self.model = SentenceTransformer(model_name)
+    def __init__(
+        self,
+        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+    ):
         self.model_name = model_name
-        self.embedding_dimension = self.model.get_sentence_embedding_dimension()
-    
+        self.model = None
+        self.embedding_dimension = 384
+
+    def _load_model(self):
+        if self.model is None:
+            self.model = SentenceTransformer(
+                self.model_name,
+                device="cpu",
+            )
+
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        embeddings = self.model.encode(texts, show_progress_bar=False)
+        self._load_model()
+        embeddings = self.model.encode(
+            texts,
+            show_progress_bar=False,
+            convert_to_numpy=True,
+        )
         return embeddings.tolist()
-    
+
     def embed_text(self, text: str) -> list[float]:
-        embeddings = self.embed_texts([text])
-        return embeddings[0]
+        return self.embed_texts([text])[0]
+
 
 embedder = Embedder()
