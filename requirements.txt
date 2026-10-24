@@ -3,8 +3,8 @@ uvicorn==0.30.1
 python-multipart==0.0.9
 python-dotenv==1.0.1
 SQLAlchemy==2.0.35
+fastembed
 
-sentence-transformers==6.2.0
 openai==1.51.0
 chromadb==0.5.11
 
@@ -12,5 +12,4 @@ PyMuPDF>=1.26
 python-docx==1.1.2
 
 numpy==1.26.4
-scikit-learn==1.5.2
 requests==2.32.3
